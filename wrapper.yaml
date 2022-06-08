@@ -1,0 +1,16 @@
+version: "2"
+services:
+  wrapper:
+    image: ${BUILD_PROJ}/${PKG}:${PKG_VERSION}
+    build:
+      dockerfile: ${DOCKER_FILE}
+      context: .
+      args:
+        - python_version=${BUILD_PYTHON_VERSION}
+        - pkg=${PKG}
+        - pkg_version=${PKG_VERSION}
+        - pkg_extra=${PKG_EXTRA}
+        - pkg_main=${PKG_MAIN}
+        - pkg_app=${PKG_APP}
+        - pkg_dir=${PKG_DIR}
+        - nexus_password=${NEXUS_PASSWORD}

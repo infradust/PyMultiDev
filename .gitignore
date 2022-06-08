@@ -1,0 +1,12 @@
+*.key
+.idea/
+/repos/*
+repos/**/*
+!repos/.gitkeep
+dist/**/*
+!dist/.gitkeep
+data/**/*
+pip_override/**/*
+!pip_override/.gitkeep
+pip_pre_install/**/*
+!pip_pre_install/.gitkeep

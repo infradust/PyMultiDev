@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export FLYWAY_SQL="${1}"
+export FLYWAY_DB="${2}"
+
+docker-compose -f persistence.yaml run --rm flyway-migrate

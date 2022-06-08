@@ -1,0 +1,18 @@
+version: "2"
+services:
+  sparkbase:
+    image: ${PROJ}/multidev:${DEV_VERSION}
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+    environment:
+      - AWS_CONFIG_FILE=/root/.aws/credentials
+    labels:
+      - "traefik.enable=false"

@@ -1,0 +1,10 @@
+gcsfs
+s3fs
+fsspec
+pyarrow
+pandas
+numpy
+jupyter
+ipywidgets
+jupyterlab
+jupyterlab_widgets

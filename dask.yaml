@@ -1,0 +1,82 @@
+version: "2"
+services:
+  scheduler:
+    image: multidev/dask:${DEV_VERSION}
+    container_name: dask-scheduler-${DEV_VERSION}
+    build:
+      context: .
+      dockerfile: dask.Dockerfile
+      args:
+        - dev_version=${DEV_VERSION}
+    ports:
+      - "${DASK_SCHEDULER_PORT}:8786"
+      - "${DASK_SCHEDULER_UI_PORT}:8787"
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+    environment:
+      - AWS_CONFIG_FILE=/.aws/credentials
+    command: ["dask-scheduler"]
+  worker-1:
+    image: multidev/dask:${DEV_VERSION}
+    container_name: dask-worker-1
+    hostname: dask-worker-${DEV_VERISON}-1
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+    environment:
+      - AWS_CONFIG_FILE=/.aws/credentials
+    command: ["dask-worker", "tcp://dask-scheduler-${DEV_VERSION}:8786", "--memory-limit", "${DASK_WORKER_MEMORY} GiB", "--nprocs", "1", "--nthreads", "2"]
+  worker-2:
+    extends:
+      service: worker-1
+    container_name: dask-worker-2
+    hostname: dask-worker-${DEV_VERISON}-2
+  worker-3:
+    extends:
+      service: worker-1
+    container_name: dask-worker-3
+    hostname: dask-worker-${DEV_VERISON}-3
+  worker-4:
+    extends:
+      service: worker-1
+    container_name: dask-worker-4
+    hostname: dask-worker-${DEV_VERISON}-4
+#  worker-5:
+#    extends:
+#      service: worker-1
+#    container_name: dask-worker-5
+#    hostname: dask-worker-${DEV_VERISON}-5
+#  worker-6:
+#    extends:
+#      service: worker-1
+#    container_name: dask-worker-6
+#    hostname: dask-worker-${DEV_VERISON}-6
+#  worker-7:
+#    extends:
+#      service: worker-1
+#    container_name: dask-worker-7
+#    hostname: dask-worker-${DEV_VERISON}-7
+#  worker-8:
+#    extends:
+#      service: worker-1
+#    container_name: dask-worker-8
+#    hostname: dask-worker-${DEV_VERISON}-8
+networks:
+  default:
+    external:
+      name: ${DOCKER_NETWORK}

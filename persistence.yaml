@@ -1,0 +1,269 @@
+version: "2"
+services:
+  mongodb:
+    image: mongo:3.6
+    container_name: mongodb
+    network_mode: skynet
+    volumes:
+      - ./data/mongo:/data/db
+    ports:
+      - "27017:27017"
+    labels:
+      - "traefik.enable=false"
+  verticadb:
+    image: jbfavre/vertica:8.1
+    container_name: verticadb
+    network_mode: skynet
+    volumes:
+      - ./data/vertica:/home/dbadmin/docker
+    ports:
+      - "5433:5433"
+    labels:
+      - "traefik.enable=false"
+  postgresdb:
+    image: postgres:13
+    container_name: postgresdb
+    network_mode: skynet
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_PASSWORD=admin
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    labels:
+      - "traefik.enable=false"
+  mssqldb:
+    image: microsoft/mssql-server-linux:2017-GA # DEV USAGE ONLY!!!!
+    container_name: mssqldb
+    network_mode: skynet
+    restart: on-failure
+    volumes:
+      - ./scripts/mssql:/scripts
+      - ./data/mssql:/var/opt/mssql # data persistence
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Aws0mP4ssw0rd!
+    labels:
+      - "traefik.enable=false"
+  rabbitmq:
+    image: rabbitmq:3.8.1-management
+    network_mode: skynet
+    container_name: rabbitmq
+#    hostname: "my-rabbit"
+#    environment:
+#      - RABBITMQ_DEFAULT_VHOST=my-rabbit
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    labels:
+      - "traefik.enable=false"
+  keycloak:
+    image: jboss/keycloak
+    network_mode: skynet
+    container_name: keycloak-dev
+    ports:
+      - "38080:8080"
+      - "38083:8443"
+    volumes:
+#      - ${USER_DATA_DIR}/keycloak/ca/ca.crt:/ca_bundle/ca.crt  # used for mutual tls
+      - ${KEYCLOAK_TLS_DIR}:/etc/x509/https
+      - ${KEYCLOAK_REALMS_DIR}:/devrealms
+    environment:
+      - DB_VENDOR=postgres
+      - DB_ADDR=postgresdb
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - DB_DATABASE=${KEYCLOAK_DB}
+      - KEYCLOAK_USER=keycloak
+      - KEYCLOAK_PASSWORD=aaa
+      - KEYCLOAK_IMPORT=${KEYCLOAK_REALM_FILE}
+      - KEYCLOAK_LOGLEVEL=DEBUG
+      - ROOT_LOGLEVEL=DEBUG
+      - PROXY_ADDRESS_FORWARDING=true
+    command: ["-b", "0.0.0.0", "-Dkeycloak.profile.feature.docker=enabled" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=8080"
+      - "traefik.frontend.priority=100"
+      - "traefik.frontend.rule=Host:${TRAEFIK_DOMAIN}; PathPrefix: ${KEYCLOAK_PATH_PREFIX}"
+      - "traefik.protocol=${TRAEFIK_PROTOCOL}"
+  traefik:
+    image: traefik
+    container_name: traefik-dev
+    networks:
+      - skynet
+    ports:
+      - "${TRAEFIK_ACCESS_PORT}:80"
+      - "${TRAEFIK_MANAGEMENT_PORT}:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+#      - ${USER_DATA_DIR}/${TRAEFIK_CONF_FILE}:/etc/traefik/traefik.toml
+#      - X509_CA_BUNDLE=/ca_bundle/ca.crt  # used for mutual tls
+    command: ["--api.insecure=true", "--providers.docker=true", "--providers.docker.exposedbydefault=false", "--entrypoints.web.address=:80"]
+  elasticsearch:
+    image: elasticsearch:${ELK_VERSION}
+    volumes:
+      - ./configs/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    ports:
+      - "${ELASTIC_PORT}:9200"
+      - "${ELASTIC_NODES_PORT}:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: changeme
+      # ES_PATH_CONF: ${USER_DATA_DIR}/${LOGSTASH_CONF_FILE}/elasticsearch.yml
+    network_mode: skynet
+    container_name: elasticsearch
+  logstash:
+    image: logstash:${ELK_VERSION}
+    volumes:
+      - ${USER_DATA_DIR}/logstash:/udata
+      - ./configs/logstash:/usr/share/logstash/config
+      - ./configs/logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5000:5000"
+      - "${LOGSTASH_PORT}:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - skynet
+    depends_on:
+      - elasticsearch
+    container_name: logstash
+    command: -f ${LOGSTASH_PIPELINE_FILE} --config.reload.automatic
+  kibana:
+    image: kibana:${ELK_VERSION}
+    volumes:
+      - ./configs/kibana/:/usr/share/kibana/config/
+    ports:
+      - "${KIBANA_PORT}:5601"
+    networks:
+      - skynet
+    depends_on:
+      - elasticsearch
+    container_name: kibana
+  cassandra:
+    image: cassandra:3.11.5
+    ports:
+      - "${CASSANDRA_PORT}:7000"
+    volumes:
+      - ./data/cassandra:/var/lib/cassandra
+    network_mode: skynet
+    container_name: cassandra
+  redis:
+    image: redis:5.0.7
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+    - ~/data/redis:/data
+    network_mode: skynet
+    container_name: redis
+    command: --requirepass secret
+  airflow_scheduler:
+    image: airflow:${DEV_VERSION}
+    env_file:
+      - repos/.env
+    container_name: airflow_scheduler
+    build:
+      context: .
+      dockerfile: ./airflow.Dockerfile
+    command: scheduler
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW_ALCHEMY_STRING}
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_PASS=guest
+      - RABBIT_USER=guest
+    volumes:
+      - ${AIRFLOW_DAGS}:/opt/airflow/dags
+      - ./data/airflow/logs:/opt/airflow/logs
+      - ./repos:/repos
+    networks:
+      - skynet
+  airflow_webserver:
+    image: airflow:${DEV_VERSION}
+    env_file:
+      - repos/.env
+    container_name: airflow_webserver
+    build:
+      context: .
+      dockerfile: ./airflow.Dockerfile
+    entrypoint: /scripts/airflow_entrypoint.sh
+    depends_on:
+      - airflow_scheduler 
+    volumes:
+      - ${AIRFLOW_DAGS}:/opt/airflow/dags
+      - ./configs/airflow/airflow.cfg:/opt/airflow/airflow.cfg
+      - ./data/airflow/logs:/opt/airflow/logs
+      - ./scripts:/scripts
+      - ./repos:/repos
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW_ALCHEMY_STRING}
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_PASS=guest
+      - RABBIT_USER=guest
+    ports:
+      - "${AIRFLOW_PORT}:8080"
+    networks:
+      - skynet
+  minio: # AT THE MOMENT THERE CAN BE ONLY ONE (exposed using traefik)
+    image: minio/minio
+    container_name: minio-${DEV_VERSION}
+    ports:
+      - "${MINIO_PORT}:${MINIO_CONSOLE}"
+    volumes:
+      - ./data/minio:/data
+    environment:
+      - MINIO_BROWSER_REDIRECT_URL=https://minio.${TRAEFIK_DOMAIN}
+      - MINIO_API_SELECT_PARQUET=on
+    command: ["server", "/data", "--address", "0.0.0.0:${MINIO_INTERNAL_PORT}", "--console-address", "0.0.0.0:${MINIO_CONSOLE}"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio-${DEV_VERSION}.rule=Host(`minio.${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.minio-${DEV_VERSION}.service=minioService-${DEV_VERSION}"
+      - "traefik.http.services.minioService-${DEV_VERSION}.loadbalancer.server.port=${MINIO_CONSOLE}"
+      - "traefik.http.services.minioService-${DEV_VERSION}.loadbalancer.passhostheader=true"
+    networks:
+      - skynet
+  flyway-migrate:
+    image: flyway/flyway
+    container_name: db-migration
+    volumes:
+      - ${FLYWAY_SQL}:/flyway/sql
+    command: [
+        "-url=${FLYWAY_URL}/${FLYWAY_DB}",
+        "-user=${FLYWAY_USER}",
+        "-password=${FLYWAY_PASS}",
+        "-schemas=${FLYWAY_SCHEMA}",
+        "migrate"]
+    networks:
+      - skynet
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    volumes:
+      - ${PGADMIN_CONF}:/data/pgadmin/conf
+      - ${PGADMIN_DATA}:/var/lib/pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=a@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - SCRIPT_NAME=/pgadmin
+    ports:
+      - "${PGADMIN_PORT}:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=(Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`/pgadmin`)) || Headers(`Referer`, `http://${TRAEFIK_DOMAIN}/pgadmin`)"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    networks:
+      - skynet
+
+networks:
+  skynet:
+    external: true

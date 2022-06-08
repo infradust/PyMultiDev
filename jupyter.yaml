@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  jupyter:
+    image: ${PROJ}/multidev:${DEV_VERSION}-jupyter
+    build:
+      context: .
+      dockerfile: jupyter.Dockerfile
+      args:
+        - base_image=${PROJ}/multidev:${DEV_VERSION}
+        - pip_flags=${PIP_FLAGS}
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+      - ./data/jupyter/kernel:/usr/local/share/jupyter/kernels/pyspark
+    container_name: jupyter_${DEV_VERSION}
+    environment:
+      - AWS_CONFIG_FILE=/.aws/credentials
+      - JUPYTER_INTERNAL_PORT=${JUPYTER_INTERNAL_PORT}
+      - JUPYTERLAB_ENABLED=true
+    ports:
+      - ${JUPYTER_PORT}:${JUPYTER_INTERNAL_PORT}
+    command: [
+        "jupyter", "lab",
+        "--notebook-dir=/data/jupyter",
+        "--ip='0.0.0.0'",
+        "--port=${JUPYTER_INTERNAL_PORT}",
+        "--no-browser",
+        "--NotebookApp.token=''",
+        "--NotebookApp.password=''",
+        "--allow-root", "--NotebookApp.base_url=/jup-${DEV_VERSION}"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jup-${DEV_VERSION}.rule=(Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`/jup-${DEV_VERSION}`)) || Headers(`Referer`, `http://${TRAEFIK_DOMAIN}/jup-${DEV_VERSION}`)"
+      - "traefik.http.services.jup-${DEV_VERSION}.loadbalancer.server.port=${JUPYTER_INTERNAL_PORT}"
+
+networks:
+  default:
+    external:
+      name: ${DOCKER_NETWORK}

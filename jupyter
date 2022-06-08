@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker-compose -f jupyter.yaml up -d

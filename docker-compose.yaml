@@ -1,0 +1,182 @@
+version: "3.9"
+services:
+  builder:
+    image: ${PROJ}/multidev:${DEV_VERSION}
+    build:
+      context: .
+      args:
+        - legacy_resolver=${LEGACY_RESOLVER}
+        - install_spark=${INSTALL_SPARK}
+        - install_msodbc=${INSTALL_MSODBC}
+        - dev_image=${DEV_PYTHON_IMAGE}:${DEV_PYTHON_VERSION}
+        - pip_flags=${PIP_FLAGS}
+  dev1:
+    image: ${PROJ}/multidev:${DEV_VERSION}
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+    environment:
+      - AWS_CONFIG_FILE=/.aws/credentials
+    container_name: ${SERVICE_NAME}
+    ports:
+      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+  dev2:
+    image: ${PROJ}/multidev:${DEV_VERSION}
+    env_file:
+      - repos/.env
+    volumes:
+      - ~/.aws:/root/.aws
+      - ./repos:/repos
+      - ./dist:/dist
+      - ~/data:/data
+      - ~/dev:/user_dev
+      - ./scripts:/scripts
+      - ./odbcinst.ini:/etc/odbcinst.ini
+    environment:
+      - AWS_CONFIG_FILE=/.aws/credentials
+    container_name: ${SERVICE_NAME}
+    ports:
+      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev3:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev4:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev5:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev6:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev7:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  dev8:
+#    extends:
+#      service: devbase
+#    container_name: ${SERVICE_NAME}
+#    ports:
+#      - ${SERVICE_PORT}:${SERVICE_INTERNAL_PORT}
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.port=${SERVICE_INTERNAL_PORT}"
+#      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`${TRAEFIK_PATH_PREFIX}`)"
+#      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-stripprefix"
+#      - "traefik.http.middlewares.${SERVICE_NAME}-stripprefix.stripprefix.prefixes=${TRAEFIK_PATH_PREFIX}"
+#      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+#  maker:
+#    extends:
+#      service: multidev
+#    entrypoint: /scripts/make_distro.sh
+#    command: -d /dist
+#  tester:
+#    extends:
+#      service: multidev
+#    entrypoint: /scripts/tester.sh
+#  uploader:
+#    extends:
+#      service: multidev
+#    environment:
+#      - NEXUS_REPO=dev.multi.com:8443/repository
+#      - TWINE_REPOSITORY_URL=${TWINE_REPOSITORY_URL}
+#    volumes:
+#      - ${NEXUS_CERT}:/ca-bundle.crt:ro
+#    command: twine upload /dist/*.tar.gz -u ${NEXUS_USER} -p ${NEXUS_PASSWORD} --cert /ca-bundle.crt
+#  code-server:
+#    extends:
+#      service: devbase
+#    container_name: code-server-${DEV_VERSION}
+#    environment:
+#      - DOCKER_USER=${USER}
+#    volumes:
+#      - ~/.csconfig:/root/.config
+#    ports:
+#      - "${CODE_SERVER_PORT}:${CODE_SERVER_INTERNAL_PORT}"
+#    command: [
+#        "code-server",
+#        "--bind-addr", "0.0.0.0:${CODE_SERVER_INTERNAL_PORT}",
+#        "--auth", "none",
+#        "--user-data-dir", "/data/code-server-data" ]
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.csvr-${DEV_VERSION}.rule=(Host(`${TRAEFIK_DOMAIN}`) && PathPrefix(`/csvr-${DEV_VERSION}`)) || Headers(`Referer`, `http://${TRAEFIK_DOMAIN}/csvr-${DEV_VERSION}`)"
+#      - "traefik.http.routers.csvr-${DEV_VERSION}.middlewares=csvr-${DEV_VERSION}-stripprefix-http"
+#      - "traefik.http.middlewares.csvr-${DEV_VERSION}-stripprefix-http.stripprefix.prefixes=/csvr-${DEV_VERSION}"
+#      - "traefik.http.services.csvr-${DEV_VERSION}.loadbalancer.server.port=${CODE_SERVER_INTERNAL_PORT}"
+
+networks:
+  default:
+    external: true
+    name: ${DOCKER_NETWORK}

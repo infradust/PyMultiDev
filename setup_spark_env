@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cd ./repos
+env_file="./.env"
+paths=`ls -d */`
+docker_dest="/repos"
+ppath="${docker_dest}/${paths//[$'/'][$'\r\n']/:${docker_dest}/}"
+ppath="${ppath%/*}"
+echo "PYTHONPATH=${ppath}:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9-src.zip" > ${env_file}
+echo "SPARK_HOME=/opt/spark" >> ${env_file}
+echo "PYSPARK_PYTHON=python3" >> ${env_file}
+echo "SPARK_NO_DAEMONIZE=true" >> ${env_file}
+#echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> ${env_file}
+echo "JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64" >> ${env_file}
+echo 'PYSPARK_SUBMIT_ARGS="--master spark://spark-master:7077 pyspark-shell"' >> ${env_file}

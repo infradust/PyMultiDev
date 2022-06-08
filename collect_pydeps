@@ -1,0 +1,17 @@
+#!/bin/bash
+
+DEV_PYTHON_VERSION=${DEV_PYTHON_VERSION:-"3.8"}
+
+docker run \
+  -v "$(pwd)/pip_pre_install":/collect \
+  -v "$(pwd)/scripts":/scripts \
+  -v "$(pwd)/repos":/repos \
+  --name pmd-collector \
+  python:${DEV_PYTHON_VERSION} \
+  /scripts/collect_pydeps /collect
+if [ "$?" != "0" ]; then
+  echo "docker dependency collection failed"
+  docker rm -f pmd-collector
+  exit 1
+fi
+docker rm -f pmd-collector

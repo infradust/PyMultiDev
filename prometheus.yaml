@@ -1,0 +1,40 @@
+version: "2"
+services:
+  prometheus:
+    image: prom/prometheus
+    network_mode: skynet
+    container_name: prometheus
+    volumes:
+      - ./configs/prometheus:/conf
+      - ./data/prometheus:/prometheus_data:rw
+    ports:
+      - "10090:9090"
+    command: ["--config.file=${PROMETHEUS_FILE}", "--storage.tsdb.path=/prometheus_data"]
+    labels:
+      - "traefik.enable=false"
+  prometheus-statsd:
+    image: prom/statsd-exporter
+    container_name: promstatsd
+    network_mode: skynet
+    ports:
+      - 8125:8125/udp
+      - 8125:8125
+      - 9102:9102
+    command: ["--log.level", "debug", "--statsd.listen-udp", ":8125", "--statsd.listen-tcp", ":8125"]
+    labels:
+      - "traefik.enable=false"
+#  prometheus-push:
+#    image: prom/pushgateway
+#    network_mode: skynet
+#    container_name: prompush
+#    depends_on:
+#      - prometheus
+#    ports:
+#      - "9091:9091"
+#    labels:
+#      - "traefik.enable=false"
+
+
+networks:
+  skynet:
+    external: true

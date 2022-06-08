@@ -1,0 +1,38 @@
+#!/bin/bash
+
+docker_dest="/repos"
+# export REPO_OWNER=<someone>
+# export REPO_HOST=git@github.com
+repo_prefix="${REPO_HOST}:${REPO_OWNER}"
+
+cd repos/
+# delete all directories
+# rm -rf */
+OIFS=$IFS
+for repo in "$@"
+do
+    res=""
+    IFS=':' read -ra parts <<< "${repo}"
+    repo_url="${repo_prefix}/${parts[0]}.git"
+    if [ "${#parts[@]}" == "2" ]; then
+        res="-b ${parts[1]} ${repo_url}"
+    else
+        res="${repo_url}"
+    fi
+    if [ -z "${SSH_IDENTITY}" ]; then
+      git clone ${res}
+    else
+      res="ssh-add ${SSH_IDENTITY}; git clone ${res}"
+      eval "ssh-agent bash -c '${res}'"
+    fi
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+      echo "${repo_url} clone failed! SSH_IDENTITY=${SSH_IDENTITY}"
+      exit 1
+    fi
+done
+IFS=$OIFS
+paths=`ls -d */`
+ppath="${docker_dest}/${paths//[$'/'][$'\r\n']/:${docker_dest}/}"
+ppath="${ppath%/*}"
+echo "PYTHONPATH=${ppath}" > .env
