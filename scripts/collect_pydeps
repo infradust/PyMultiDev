@@ -1,0 +1,59 @@
+#!/bin/bash
+
+echoerr() { echo "FAILURE: $@" 1>&2; }
+echowarn() { echo "WARNING: $@" 1>&2; }
+
+collect_dir="$1"
+mkdir -p "${collect_dir}/tmp"
+paths=$(ls -d /repos/*/)
+repos="${paths//[$'/']repos[$'/']/}"
+repos="${repos//[$'\t\r\n']/}"
+repos="${repos//[$'/']/ }"
+
+concat_file="${collect_dir}/tmp/req_concat.txt"
+req_file="${collect_dir}/requirements.txt"
+
+rm -f "${concat_file}"
+touch "${concat_file}"
+cd ./repos || exit 1
+for d in ${repos}
+do
+    repo_dir="/repos/${d}"
+    cd "${repo_dir}" || exit 1
+    if [ -f "requirements.txt" ]; then
+    echo "found requirements file: ${repo_dir}/requirements.txt, adding dependencies"
+    echo "----" >> ${concat_file}
+      cat requirements.txt >> ${concat_file}
+      echo "" >> ${concat_file}
+    fi
+    if [ -f "setup.py" ]; then
+        name=$(python setup.py --name | tail -n 1)
+        name_fix="${name//-/_}"
+        echo "--${name_fix}--" >> "${concat_file}"
+        python setup.py egg_info > /dev/null
+        out_dir=`find $(pwd) -name "${name_fix}.egg-info"`
+        if [ "${out_dir}" = "" ]; then
+            echo "ERROR: could not create package info for ${d}"
+            exit -1
+        fi
+        if [ -f "${out_dir}/requires.txt" ]; then
+            cat "${out_dir}/requires.txt" >> "${concat_file}"
+        else
+            echo "NAME: ${name}"
+            echo "NAME_FIX: ${name_fix}"
+            echo "REPO_DIR: ${repo_dir}"
+            echowarn "could not find egg-info requirements file for ${d} (${out_dir})"
+            echowarn "this usually suggest a malformed setup.py file, consider refactoring"
+        fi
+        rm -rf "${out_dir:?}/"
+    else
+        echowarn "no setup.py file found at ${repo_dir}"
+        echowarn "this is not a well structured python package and might not function as expected"
+    fi
+    cd ..
+done
+
+#generate requirements file
+python /scripts/dedup.py "${concat_file}" "${req_file}"
+chmod a+rw "${req_file}"
+rm -rf "${collect_dir}/tmp"

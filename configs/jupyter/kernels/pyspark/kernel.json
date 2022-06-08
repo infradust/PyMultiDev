@@ -1,0 +1,12 @@
+{
+"display_name": "PySpark",
+"language": "python",
+"argv": [ "jupyter", "lab", "-m", "ipykernel", "-f", "{connection_file}" ],
+"env": {
+    "SPARK_HOME": "/opt/spark",
+    "PYSPARK_DRIVER_PYTHON": "jupyter",
+    "PYSPARK_PYTHON": "python",
+    "PYSPARK_SUBMIT_ARGS": "--master spark://spark-master:7070 pyspark-shell",
+    "PYTHONSTARTUP": "/opt/spark/python/pyspark/shell.py"
+  }
+}
